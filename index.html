@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <title>Linky Dinks | Algorithmic Art & Recursive Geometry</title>
+    
+    <!-- Primary Meta Tags -->
+    <meta name="title" content="Linky Dinks | Algorithmic Art & Recursive Geometry">
+    <meta name="description" content="Explore Linky Dinks, an immersive WebGL generative art experience. Create, customize, and export stunning recursive geometry patterns and 4K fractal wallpapers in real-time.">
+    <meta name="keywords" content="Linky Dinks, algorithmic art, recursive geometry, WebGL, generative art, fractal wallpaper generator, digital art tool">
+    <meta name="author" content="Chris Pirillo">
+    <link rel="canonical" href="https://pirillo.com/arcade/linky-dinks.html">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://pirillo.com/arcade/linky-dinks.html">
+    <meta property="og:title" content="Linky Dinks | Algorithmic Art & Recursive Geometry">
+    <meta property="og:description" content="An interactive algorithmic art experience. Generate complex recursive geometry and export high-resolution wallpapers.">
+    <meta property="og:image" content="https://pirillo.com/arcade/images/linky-dinks.png">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://pirillo.com/arcade/linky-dinks.html">
+    <meta property="twitter:title" content="Linky Dinks | Algorithmic Art & Recursive Geometry">
+    <meta property="twitter:description" content="Generate complex recursive geometry and export high-resolution wallpapers. Interactive WebGL art.">
+    <meta property="twitter:image" content="https://pirillo.com/arcade/images/linky-dinks.png">
+    <meta name="twitter:creator" content="@ChrisPirillo">
+
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Linky Dinks",
+      "url": "https://pirillo.com/arcade/linky-dinks.html",
+      "description": "An interactive WebGL-based generative art tool for creating recursive geometry and fractal patterns.",
+      "applicationCategory": "MultimediaApplication",
+      "operatingSystem": "Web",
+      "author": {
+        "@type": "Person",
+        "name": "Chris Pirillo",
+        "url": "https://pirillo.com"
+      },
+      "image": "https://pirillo.com/arcade/images/linky-dinks.png"
+    }
+    </script>
+
+    <!-- Resource Hints & Performance -->
+    <link rel="preconnect" href="https://www.googletagmanager.com">
+    <link rel="dns-prefetch" href="https://www.googletagmanager.com">
+
+    <!-- Google Analytics (GTAG) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-1CQ4D3VQ3L"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-1CQ4D3VQ3L');
+    </script>
+
+    <style>
+        :root {
+            --bg-color: #050505;
+            --panel-bg: rgba(20, 20, 20, 0.9);
+            --text-color: #eee;
+            --accent-color: #00ffcc;
+            --accent-hover: #00ccaa;
+            --input-bg: rgba(255, 255, 255, 0.1);
+            --font-main: 'Segoe UI', system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-main);
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+            background-color: #000;
+        }
+
+        #curtain {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: black;
+            opacity: 1;
+            pointer-events: none;
+            transition: opacity 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+            z-index: 50;
+        }
+
+        .menu-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 44px;
+            height: 44px;
+            cursor: pointer;
+            pointer-events: auto;
+            z-index: 102;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+            background: rgba(0,0,0,0.4);
+            border-radius: 8px;
+            backdrop-filter: blur(8px);
+            transition: transform 0.2s;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .menu-btn:hover { transform: scale(1.05); background: rgba(0,0,0,0.6); }
+        .menu-btn:active { transform: scale(0.95); }
+
+        .bar {
+            width: 24px;
+            height: 2px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 2px;
+        }
+
+        body.menu-open .bar:nth-child(1) { transform: translateY(8px) rotate(45deg); }
+        body.menu-open .bar:nth-child(2) { opacity: 0; }
+        body.menu-open .bar:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
+
+        #settings-panel {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 320px;
+            height: 100%;
+            background: var(--panel-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            transform: translateX(100%);
+            transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+            pointer-events: auto;
+            display: flex;
+            flex-direction: column;
+            padding: 80px 24px 24px;
+            box-shadow: -10px 0 30px rgba(0,0,0,0.5);
+            overflow-y: auto;
+            z-index: 101;
+        }
+
+        body.menu-open #settings-panel {
+            transform: translateX(0);
+        }
+
+        .control-group { margin-bottom: 24px; }
+
+        label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: #aaa;
+            margin-bottom: 10px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            -webkit-appearance: none;
+            background: var(--input-bg);
+            height: 6px;
+            border-radius: 3px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: var(--accent-color);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 255, 204, 0.3);
+            transition: transform 0.2s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
+
+        input[type="color"] {
+            width: 100%;
+            height: 40px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: none;
+            cursor: pointer;
+            border-radius: 6px;
+        }
+
+        .btn-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .btn-full { grid-column: span 2; }
+
+        button {
+            background: var(--input-bg);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: white;
+            padding: 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.8px;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background: rgba(255,255,255,0.2);
+            border-color: rgba(255,255,255,0.4);
+        }
+
+        button.primary {
+            background: var(--accent-color);
+            color: #050505;
+            border: none;
+        }
+
+        button.primary:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+
+        .value-display {
+            color: var(--accent-color);
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+        }
+
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        #notification {
+            position: fixed;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%) translateY(120px);
+            background: rgba(0,255,204,0.15);
+            color: var(--accent-color);
+            padding: 14px 28px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            backdrop-filter: blur(12px);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 200;
+            border: 1px solid var(--accent-color);
+            pointer-events: none;
+        }
+        #notification.show { transform: translateX(-50%) translateY(0); }
+
+        #instructions {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            color: rgba(255,255,255,0.5);
+            font-size: 0.85rem;
+            pointer-events: none;
+            transition: opacity 0.5s;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        body.menu-open #instructions { opacity: 0; }
+        
+        @media (max-width: 600px) {
+            #settings-panel { width: 100%; max-width: 100%; }
+            #instructions { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <header role="banner">
+        <button class="menu-btn" id="menu-toggle" aria-label="Toggle Configuration Menu" aria-expanded="false">
+            <span class="bar"></span>
+            <span class="bar"></span>
+            <span class="bar"></span>
+        </button>
+    </header>
+
+    <main id="main-content">
+        <!-- WebGL Canvas -->
+        <canvas id="glcanvas" aria-label="Interactive recursive geometry canvas"></canvas>
+
+        <!-- Transition Curtain for Visual Comfort -->
+        <div id="curtain" aria-hidden="true"></div>
+
+        <div id="instructions">Click anywhere to randomize the algorithm</div>
+    </main>
+
+    <!-- Settings Panel (SEO: Using Aside as it is tangential to the primary art display) -->
+    <aside id="settings-panel" aria-label="Visual Configuration Panel">
+        <h1 style="margin-top:0; font-weight:300; font-size:1.6rem; color:var(--accent-color); letter-spacing: -0.5px;">Linky Dinks</h1>
+        <p style="font-size:0.8rem; color:#888; margin-bottom:30px; line-height: 1.4;">Tweak the recursive algorithm parameters to create unique generative art.</p>
+
+        <section class="control-group">
+            <label for="inp-speed">Speed <span id="val-speed" class="value-display">1.0</span></label>
+            <input type="range" id="inp-speed" min="0" max="5" step="0.1" value="1.0">
+        </section>
+
+        <section class="control-group">
+            <label for="inp-scale">Scale (Zoom) <span id="val-scale" class="value-display">3.0</span></label>
+            <input type="range" id="inp-scale" min="0.5" max="10" step="0.1" value="3.0">
+        </section>
+
+        <section class="control-group">
+            <label for="inp-rot">Rotation Factor <span id="val-rot" class="value-display">2.4</span></label>
+            <input type="range" id="inp-rot" min="0" max="6.28" step="0.01" value="2.4">
+        </section>
+
+        <section class="control-group">
+            <label for="inp-dist-freq">Distortion Freq <span id="val-dist-freq" class="value-display">2.4</span></label>
+            <input type="range" id="inp-dist-freq" min="0" max="10" step="0.1" value="2.4">
+        </section>
+
+        <section class="control-group">
+            <label for="inp-dist-amp">Distortion Amp <span id="val-dist-amp" class="value-display">5.0</span></label>
+            <input type="range" id="inp-dist-amp" min="0" max="20" step="0.1" value="5.0">
+        </section>
+
+        <section class="control-group">
+            <label for="inp-iter">Iterations <span id="val-iter" class="value-display">20</span></label>
+            <input type="range" id="inp-iter" min="5" max="40" step="1" value="20">
+        </section>
+
+        <section class="control-group">
+            <label for="inp-falloff">Color Falloff <span id="val-falloff" class="value-display">0.01</span></label>
+            <input type="range" id="inp-falloff" min="0.001" max="0.1" step="0.001" value="0.01">
+        </section>
+
+        <section class="control-group">
+            <label for="inp-color1">Primary Color</label>
+            <input type="color" id="inp-color1" value="#ff0044">
+        </section>
+        
+        <section class="control-group">
+            <label for="inp-color2">Secondary Color</label>
+            <input type="color" id="inp-color2" value="#00ccff">
+        </section>
+
+        <section class="toggle-row">
+            <label for="inp-auto" style="margin:0; color:#fff;">Auto-Advance</label>
+            <input type="checkbox" id="inp-auto" style="width:20px; height:20px; accent-color: var(--accent-color);">
+        </section>
+        
+        <section class="control-group" style="margin-top:10px;">
+            <label for="inp-interval">Interval (sec) <span id="val-interval" class="value-display">5</span></label>
+            <input type="range" id="inp-interval" min="2" max="60" step="1" value="5">
+        </section>
+
+        <div class="btn-grid">
+            <button onclick="app.resetDefaults()">Reset</button>
+            <button onclick="app.randomize(true)">Randomize</button>
+            <button class="primary btn-full" onclick="app.exportWallpaper()">Export 4K Wallpaper</button>
+        </div>
+        
+        <footer style="margin-top: 40px; text-align: center; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
+            <p style="font-size: 0.7rem; color: #666;">Art by Chris Pirillo (@ChrisPirillo)</p>
+        </footer>
+    </aside>
+
+    <div id="notification" role="status" aria-live="polite">Wallpaper Downloaded Successfully</div>
+
+    <!-- Application Logic (Unaltered as requested) -->
+    <script>
+        const vertShaderSource = `
+            attribute vec4 a_position;
+            void main() {
+                gl_Position = a_position;
+            }
+        `;
+
+        const fragShaderSource = `
+            precision highp float;
+            
+            uniform vec2 u_resolution;
+            uniform float u_time;
+            
+            uniform float u_scale;
+            uniform float u_rot_factor;
+            uniform float u_dist_freq;
+            uniform float u_dist_amp;
+            uniform float u_iter;
+            uniform float u_falloff;
+            uniform vec3 u_col1;
+            uniform vec3 u_col2;
+
+            mat2 rotate2D(float r){
+                return mat2(cos(r), sin(r), -sin(r), cos(r));
+            }
+            
+            vec3 palette( float t ) {
+                return mix(u_col1, u_col2, 0.5 + 0.5 * cos(6.28318 * (t + vec3(0.0, 0.33, 0.67))));
+            }
+
+            float getDist(vec2 p) {
+                return abs(length(p) - 0.7);
+            }
+
+            void main() {
+                vec2 p = (gl_FragCoord.xy * 2.0 - u_resolution) / u_resolution.y;
+                vec2 uv = p;
+                vec3 finalColor = vec3(0.0);
+                float t = u_time;
+                
+                for(float i = 1.0; i < 50.0; i++) {
+                    if (i > u_iter) break;
+
+                    p = uv * i * u_scale;
+                    p.y += t;
+                    p *= rotate2D(i * u_rot_factor);
+                    p.x += t * sin(ceil(p.y/8.0) * u_dist_freq) * u_dist_amp;
+                    p.y = mod(p.y, 8.0) - 4.0;
+                    p.x = fract(p.x) - 0.5;
+                    p = (p.y < 0.0) ? -p : p;
+                    p.x -= 0.5;
+                    
+                    float d = getDist(p);
+                    p.x += 1.0;
+                    
+                    if(d > 0.2) {
+                        d = getDist(p);
+                    }
+                    
+                    if(d < 0.2) {
+                        float glow = step(d, 0.15) * exp(-i * i * u_falloff);
+                        vec3 col = palette(i * 0.1 + t * 0.05);
+                        finalColor += glow * col;
+                        break;
+                    }
+                }
+                
+                gl_FragColor = vec4(finalColor, 1.0);
+            }
+        `;
+
+        const app = {
+            canvas: document.getElementById('glcanvas'),
+            gl: null,
+            program: null,
+            width: 0,
+            height: 0,
+            time: 0,
+            animationFrame: null,
+            autoTimer: null,
+            isMenuOpen: false,
+            isFading: false,
+            
+            params: {
+                speed: 1.0,
+                scale: 3.0,
+                rotFactor: 2.4,
+                distFreq: 2.4,
+                distAmp: 5.0,
+                iter: 20,
+                falloff: 0.01,
+                col1: [1.0, 0.0, 0.26],
+                col2: [0.0, 0.8, 1.0],
+                autoAdvance: false,
+                autoInterval: 5
+            },
+            
+            uniforms: {},
+
+            init() {
+                this.gl = this.canvas.getContext('webgl', { antialias: true, preserveDrawingBuffer: true });
+                if (!this.gl) {
+                    console.error('WebGL not supported');
+                    return;
+                }
+
+                this.resize();
+                window.addEventListener('resize', () => this.resize());
+                
+                this.createProgram();
+                this.createBuffers();
+                this.bindEvents();
+                
+                this.randomize(false);
+                this.render();
+                
+                setTimeout(() => {
+                    document.getElementById('curtain').style.opacity = 0;
+                }, 100);
+            },
+
+            createShader(type, source) {
+                const shader = this.gl.createShader(type);
+                this.gl.shaderSource(shader, source);
+                this.gl.compileShader(shader);
+                if (!this.gl.getShaderParameter(shader, this.gl.COMPILE_STATUS)) {
+                    console.error('Shader compile error:', this.gl.getShaderInfoLog(shader));
+                    this.gl.deleteShader(shader);
+                    return null;
+                }
+                return shader;
+            },
+
+            createProgram() {
+                const vs = this.createShader(this.gl.VERTEX_SHADER, vertShaderSource);
+                const fs = this.createShader(this.gl.FRAGMENT_SHADER, fragShaderSource);
+                
+                this.program = this.gl.createProgram();
+                this.gl.attachShader(this.program, vs);
+                this.gl.attachShader(this.program, fs);
+                this.gl.linkProgram(this.program);
+                
+                if (!this.gl.getProgramParameter(this.program, this.gl.LINK_STATUS)) {
+                    console.error('Program link error:', this.gl.getProgramInfoLog(this.program));
+                    return;
+                }
+                
+                this.gl.useProgram(this.program);
+                
+                const uNames = ['u_resolution', 'u_time', 'u_scale', 'u_rot_factor', 'u_dist_freq', 'u_dist_amp', 'u_iter', 'u_falloff', 'u_col1', 'u_col2'];
+                uNames.forEach(name => {
+                    this.uniforms[name] = this.gl.getUniformLocation(this.program, name);
+                });
+            },
+
+            createBuffers() {
+                const buffer = this.gl.createBuffer();
+                this.gl.bindBuffer(this.gl.ARRAY_BUFFER, buffer);
+                this.gl.bufferData(
+                    this.gl.ARRAY_BUFFER,
+                    new Float32Array([
+                        -1.0, -1.0,
+                         1.0, -1.0,
+                        -1.0,  1.0,
+                        -1.0,  1.0,
+                         1.0, -1.0,
+                         1.0,  1.0
+                    ]),
+                    this.gl.STATIC_DRAW
+                );
+                
+                const positionLocation = this.gl.getAttribLocation(this.program, "a_position");
+                this.gl.enableVertexAttribArray(positionLocation);
+                this.gl.vertexAttribPointer(positionLocation, 2, this.gl.FLOAT, false, 0, 0);
+            },
+
+            resize() {
+                this.width = window.innerWidth;
+                this.height = window.innerHeight;
+                this.canvas.width = this.width;
+                this.canvas.height = this.height;
+                if(this.gl) this.gl.viewport(0, 0, this.width, this.height);
+            },
+
+            updateUniforms() {
+                if(!this.gl) return;
+                
+                this.gl.uniform2f(this.uniforms['u_resolution'], this.width, this.height);
+                this.gl.uniform1f(this.uniforms['u_time'], this.time);
+                this.gl.uniform1f(this.uniforms['u_scale'], this.params.scale);
+                this.gl.uniform1f(this.uniforms['u_rot_factor'], this.params.rotFactor);
+                this.gl.uniform1f(this.uniforms['u_dist_freq'], this.params.distFreq);
+                this.gl.uniform1f(this.uniforms['u_dist_amp'], this.params.distAmp);
+                this.gl.uniform1f(this.uniforms['u_iter'], this.params.iter);
+                this.gl.uniform1f(this.uniforms['u_falloff'], this.params.falloff);
+                this.gl.uniform3fv(this.uniforms['u_col1'], this.params.col1);
+                this.gl.uniform3fv(this.uniforms['u_col2'], this.params.col2);
+            },
+
+            render(now) {
+                if (now) {
+                    this.time += (now - (this.lastTime || now)) * 0.001 * this.params.speed;
+                    this.lastTime = now;
+                }
+                
+                this.updateUniforms();
+                this.gl.drawArrays(this.gl.TRIANGLES, 0, 6);
+                
+                this.animationFrame = requestAnimationFrame((t) => this.render(t));
+            },
+
+            bindEvents() {
+                const bindInput = (id, paramKey, type = 'float') => {
+                    const el = document.getElementById(id);
+                    const disp = document.getElementById(id.replace('inp', 'val'));
+                    
+                    el.addEventListener('input', (e) => {
+                        let val = type === 'int' ? parseInt(e.target.value) : parseFloat(e.target.value);
+                        this.params[paramKey] = val;
+                        if(disp) disp.innerText = val;
+                    });
+                };
+
+                bindInput('inp-speed', 'speed');
+                bindInput('inp-scale', 'scale');
+                bindInput('inp-rot', 'rotFactor');
+                bindInput('inp-dist-freq', 'distFreq');
+                bindInput('inp-dist-amp', 'distAmp');
+                bindInput('inp-iter', 'iter', 'int');
+                bindInput('inp-falloff', 'falloff');
+                bindInput('inp-interval', 'autoInterval', 'int');
+
+                const hexToRgb = (hex) => {
+                    const r = parseInt(hex.slice(1,3), 16) / 255;
+                    const g = parseInt(hex.slice(3,5), 16) / 255;
+                    const b = parseInt(hex.slice(5,7), 16) / 255;
+                    return [r, g, b];
+                };
+
+                document.getElementById('inp-color1').addEventListener('input', (e) => {
+                    this.params.col1 = hexToRgb(e.target.value);
+                });
+                document.getElementById('inp-color2').addEventListener('input', (e) => {
+                    this.params.col2 = hexToRgb(e.target.value);
+                });
+
+                document.getElementById('inp-auto').addEventListener('change', (e) => {
+                    this.params.autoAdvance = e.target.checked;
+                    this.handleAutoAdvance();
+                });
+
+                const menuBtn = document.getElementById('menu-toggle');
+                const panel = document.getElementById('settings-panel');
+
+                const toggleMenu = (open) => {
+                    this.isMenuOpen = open;
+                    if(open) {
+                        document.body.classList.add('menu-open');
+                        menuBtn.setAttribute('aria-expanded', 'true');
+                    } else {
+                        document.body.classList.remove('menu-open');
+                        menuBtn.setAttribute('aria-expanded', 'false');
+                    }
+                };
+
+                menuBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    toggleMenu(!this.isMenuOpen);
+                });
+
+                document.addEventListener('click', (e) => {
+                    if (this.isMenuOpen && !panel.contains(e.target) && !menuBtn.contains(e.target)) {
+                        toggleMenu(false);
+                    } else if (!this.isMenuOpen && !panel.contains(e.target) && !menuBtn.contains(e.target)) {
+                        this.randomize(true);
+                    }
+                });
+
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') toggleMenu(false);
+                });
+                
+                panel.addEventListener('click', (e) => e.stopPropagation());
+            },
+
+            handleAutoAdvance() {
+                if (this.autoTimer) clearInterval(this.autoTimer);
+                if (this.params.autoAdvance) {
+                    this.autoTimer = setInterval(() => {
+                        this.randomize(true);
+                    }, this.params.autoInterval * 1000);
+                }
+            },
+
+            updateUI() {
+                document.getElementById('inp-speed').value = this.params.speed;
+                document.getElementById('val-speed').innerText = this.params.speed.toFixed(1);
+                document.getElementById('inp-scale').value = this.params.scale;
+                document.getElementById('val-scale').innerText = this.params.scale.toFixed(1);
+                document.getElementById('inp-rot').value = this.params.rotFactor;
+                document.getElementById('val-rot').innerText = this.params.rotFactor.toFixed(2);
+                document.getElementById('inp-dist-freq').value = this.params.distFreq;
+                document.getElementById('val-dist-freq').innerText = this.params.distFreq.toFixed(1);
+                document.getElementById('inp-dist-amp').value = this.params.distAmp;
+                document.getElementById('val-dist-amp').innerText = this.params.distAmp.toFixed(1);
+                document.getElementById('inp-iter').value = this.params.iter;
+                document.getElementById('val-iter').innerText = this.params.iter;
+                document.getElementById('inp-falloff').value = this.params.falloff;
+                document.getElementById('val-falloff').innerText = this.params.falloff.toFixed(3);
+
+                const rgbToHex = (r, g, b) => {
+                    const toHex = (c) => {
+                        const hex = Math.round(c * 255).toString(16);
+                        return hex.length === 1 ? "0" + hex : hex;
+                    };
+                    return "#" + toHex(r) + toHex(g) + toHex(b);
+                };
+
+                document.getElementById('inp-color1').value = rgbToHex(...this.params.col1);
+                document.getElementById('inp-color2').value = rgbToHex(...this.params.col2);
+            },
+
+            randomize(withTransition) {
+                if (this.isFading) return;
+
+                const performRandomization = () => {
+                    this.params.scale = 0.5 + Math.random() * 4.0;
+                    this.params.rotFactor = 1.0 + Math.random() * 3.0;
+                    this.params.distFreq = 1.0 + Math.random() * 5.0;
+                    this.params.distAmp = Math.random() * 8.0;
+                    this.params.iter = 15 + Math.floor(Math.random() * 15);
+                    this.params.falloff = 0.005 + Math.random() * 0.03;
+                    
+                    const randColor = () => [Math.random(), Math.random(), Math.random()];
+                    this.params.col1 = randColor();
+                    this.params.col2 = randColor();
+                    
+                    this.updateUI();
+                };
+
+                if (withTransition) {
+                    this.isFading = true;
+                    const curtain = document.getElementById('curtain');
+                    curtain.style.opacity = 1;
+                    
+                    setTimeout(() => {
+                        performRandomization();
+                        requestAnimationFrame(() => {
+                            curtain.style.opacity = 0;
+                            setTimeout(() => { this.isFading = false; }, 600);
+                        });
+                    }, 600);
+                } else {
+                    performRandomization();
+                }
+            },
+
+            resetDefaults() {
+                this.params.speed = 1.0;
+                this.params.scale = 3.0;
+                this.params.rotFactor = 2.4;
+                this.params.distFreq = 2.4;
+                this.params.distAmp = 5.0;
+                this.params.iter = 20;
+                this.params.falloff = 0.01;
+                this.params.col1 = [1.0, 0.0, 0.26];
+                this.params.col2 = [0.0, 0.8, 1.0];
+                this.updateUI();
+            },
+
+            exportWallpaper() {
+                cancelAnimationFrame(this.animationFrame);
+                
+                const originalW = this.canvas.width;
+                const originalH = this.canvas.height;
+                
+                this.canvas.width = 3840;
+                this.canvas.height = 2160;
+                this.gl.viewport(0, 0, 3840, 2160);
+                this.width = 3840;
+                this.height = 2160;
+                
+                this.updateUniforms();
+                this.gl.drawArrays(this.gl.TRIANGLES, 0, 6);
+                
+                const link = document.createElement('a');
+                const timestamp = new Date().getTime();
+                link.download = `LinkyDinks_4K_${timestamp}.jpg`;
+                link.href = this.canvas.toDataURL('image/jpeg', 0.95);
+                link.click();
+                
+                this.width = originalW;
+                this.height = originalH;
+                this.resize();
+                this.render();
+                
+                const notif = document.getElementById('notification');
+                notif.classList.add('show');
+                setTimeout(() => notif.classList.remove('show'), 3500);
+            }
+        };
+
+        window.onload = () => app.init();
+    </script>
+</body>
+</html>
